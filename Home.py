@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 
-st.set_page_config(page_title="Hoyalytics Bond Yield Predictor", layout="wide")
+st.set_page_config(page_title="Hoyalytics Bond Yield Predictor", layout="wide", initial_sidebar_state="collapsed")
 
 # Logo path
 logo_path = "images/logo_placeholder.png"

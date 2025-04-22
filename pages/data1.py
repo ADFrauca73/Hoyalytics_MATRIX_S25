@@ -3,6 +3,13 @@ import pandas as pd
 
 st.set_page_config(page_title="Select Variables", layout="wide")
 
+no_sidebar_style = """
+    <style>
+        div[data-testid="stSidebarNav"] {display: none;}
+    </style>
+"""
+st.markdown(no_sidebar_style, unsafe_allow_html=True)
+
 # ─── CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -129,4 +136,4 @@ with col1:
         st.switch_page("pages/Dashboard.py")
 with col2:
     if st.button("Next ➡️"):
-        st.switch_page("pages/data3.py")
+        st.switch_page("pages/data2.py")
