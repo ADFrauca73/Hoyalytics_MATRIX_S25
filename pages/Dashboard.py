@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from pandas.tseries.holiday import USFederalHolidayCalendar
 from pandas.tseries.offsets import CustomBusinessDay
 
-st.set_page_config(page_title="graph", layout="wide")
+st.set_page_config(page_title="graph", layout="wide", initial_sidebar_state="collapsed")
 
 no_sidebar_style = """
     <style>

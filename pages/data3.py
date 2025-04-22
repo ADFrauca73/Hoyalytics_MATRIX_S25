@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="data1", layout="wide")
+st.set_page_config(page_title="data1", layout="wide", initial_sidebar_state="collapsed")
 
 no_sidebar_style = """
     <style>

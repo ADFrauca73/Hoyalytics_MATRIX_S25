@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-st.set_page_config(page_title="Select Variables", layout="wide")
+st.set_page_config(page_title="Select Variables", layout="wide", initial_sidebar_state="collapsed")
 
 no_sidebar_style = """
     <style>
