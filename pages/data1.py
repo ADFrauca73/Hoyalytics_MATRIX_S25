@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from utils.all_tariffs import all_tariffs
 
 st.set_page_config(page_title="Select Variables", layout="wide", initial_sidebar_state="collapsed")
 
@@ -75,30 +76,7 @@ with left_col:
 # Tariff Section
 with right_col:
     st.markdown("<div class='section-title'> Tariffs Detail</div>", unsafe_allow_html=True)
-    all_tariffs = [
-        "Chapter 39 – Plastics and articles thereof",
-        "Chapter 40 – Rubber and articles thereof",
-        "Chapter 72 – Iron and steel",
-        "Chapter 73 – Articles of iron or steel",
-        "Chapter 74 – Copper and articles thereof",
-        "Chapter 75 – Nickel and articles thereof",
-        "Chapter 76 – Aluminum and articles thereof",
-        "Chapter 78 – Lead and articles thereof",
-        "Chapter 79 – Zinc and articles thereof",
-        "Chapter 80 – Tin and articles thereof",
-        "Chapter 81 – Other base metals; cermets; articles thereof",
-        "Chapter 82 – Tools, implements, cutlery, spoons and forks, of base metal",
-        "Chapter 83 – Miscellaneous articles of base metal",
-        "Chapter 84 – Nuclear reactors, boilers, machinery and mechanical appliances",
-        "Chapter 85 – Electrical machinery and equipment; sound recorders and reproducers, etc.",
-        "Chapter 86 – Railway or tramway locomotives, rolling-stock, and parts",
-        "Chapter 87 – Vehicles other than railway or tramway rolling-stock",
-        "Chapter 88 – Aircraft, spacecraft, and parts thereof",
-        "Chapter 89 – Ships, boats, and floating structures",
-        "Chapter 90 – Optical, photographic, cinematographic, measuring, checking, precision, medical instruments",
-        "Chapter 96 – Miscellaneous manufactured articles",
-        "Chapter 98 – Special classification provisions (e.g., U.S. goods returned, duty exemptions)"
-    ]
+    
     selected_tariffs = st.multiselect("Choose a tariff", options=["None"] + all_tariffs)
 
     # Remove "None" if others are selected

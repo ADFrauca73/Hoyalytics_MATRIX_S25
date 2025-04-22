@@ -1,4 +1,5 @@
 import streamlit as st
+from utils.all_tariffs import all_tariffs
 
 st.set_page_config(page_title="data1", layout="wide", initial_sidebar_state="collapsed")
 
