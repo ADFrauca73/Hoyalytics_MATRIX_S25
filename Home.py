@@ -3,6 +3,13 @@ import os
 
 st.set_page_config(page_title="Hoyalytics Bond Yield Predictor", layout="wide", initial_sidebar_state="collapsed")
 
+hide_nav_style = """
+    <style>
+        [data-testid="stSidebarNav"] { display: none; }
+    </style>
+"""
+st.markdown(hide_nav_style, unsafe_allow_html=True)
+
 # Logo path
 logo_path = "images/logo_placeholder.png"
 logo_exists = os.path.exists(logo_path)

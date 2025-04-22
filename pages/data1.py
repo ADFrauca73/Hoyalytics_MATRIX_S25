@@ -3,12 +3,12 @@ import pandas as pd
 
 st.set_page_config(page_title="Select Variables", layout="wide", initial_sidebar_state="collapsed")
 
-no_sidebar_style = """
+hide_nav_style = """
     <style>
-        div[data-testid="stSidebarNav"] {display: none;}
+        [data-testid="stSidebarNav"] { display: none; }
     </style>
 """
-st.markdown(no_sidebar_style, unsafe_allow_html=True)
+st.markdown(hide_nav_style, unsafe_allow_html=True)
 
 # ─── CSS ───────────────────────────────────────────────────────────────
 st.markdown("""
