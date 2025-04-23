@@ -56,8 +56,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ——— Data Placeholder ———
-st.markdown('<div class="data-box">📊 <strong>Placeholder for Data Display</strong></div>', unsafe_allow_html=True)
+# ——— Title and Description ———
+st.title("Tariff Implementation Dates")
+st.write("For each selected type of tariff, select at least one date in which a tariff of that type is implemented.")
 
 # ——— Select tariff dates ———
 if "filtered_df" in st.session_state:
@@ -67,20 +68,28 @@ if "filtered_df" in st.session_state:
     # ——— Dropdown for each selected tariff ———
     if "business_days_df" in st.session_state:
         business_days = st.session_state["business_days_df"]["Business Day"].tolist()
+        selected_days_dict = {}
         for tariff in selected_tariffs:
             selected_days = st.multiselect(
                 f"Select dates for {tariff}",
                 options=business_days,
                 key=f"{tariff}_selected_dates"
             )
-            
-            # Update the filtered_df columns based on selected days
+            selected_days_dict[tariff] = selected_days
+        st.session_state["selected_days_dict"] = selected_days_dict
+
+# ——— Save Data Button ———
+if st.button("Save Data", key="save_data", help="Save the updated data"):
+    if "filtered_df" in st.session_state and "selected_days_dict" in st.session_state:
+        for tariff, selected_days in selected_days_dict.items():
             for day in selected_days:
                 st.session_state["filtered_df"].loc[
                     st.session_state["filtered_df"]["Business Day"] == day, tariff
                 ] = 1
-
-    st.write("Updated DataFrame:", st.session_state["filtered_df"])
+        st.success("Data saved successfully!")
+        st.write("Updated DataFrame:", st.session_state["filtered_df"])
+    else:
+        st.error("No data available to save.")
 # ——— Navigation Buttons ———
 col1, col2, col3 = st.columns([1, 5, 1])
 
