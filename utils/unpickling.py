@@ -74,7 +74,7 @@ class YieldForecastCalculator:
                 "upper": forecast_upper,
             }
 
-    def _predict_single_yield(self, model_pickle_path):
+    def predict_single_yield(self, model_pickle_path):
         """
         Predicts and returns the yield for a specific maturity using a pre-trained model.
 
@@ -149,3 +149,45 @@ class YieldForecastCalculator:
         dict: A dictionary where keys are maturity names and values are dictionaries with mean, lower, and upper bounds.
         """
         return self.predictions
+
+import pickle
+import pandas as pd
+
+def get_yield_forecast_at_end_date(model_path, future_data, end_date):
+    """
+    Returns the yield forecast at the specified end date using a pre-trained model.
+
+    Parameters:
+    model_path (str): Path to the pickled model file.
+    future_data (pd.DataFrame): DataFrame containing the future data with exogenous variables.
+    end_date (str): The end date for which the forecast is required (in 'YYYY-MM-DD' format).
+
+    Returns:
+    dict: A dictionary containing the forecasted mean, lower bound, and upper bound at the end date.
+    """
+    # Ensure the end_date is in datetime format
+    end_date = pd.to_datetime(end_date)
+
+    # Load the model
+    with open(model_path, 'rb') as f:
+        model = pickle.load(f)
+
+    # Prepare the future data
+    future_data.index = pd.to_datetime(future_data.index).to_period("M")
+    exog_columns = [col for col in future_data.columns if col != "date"]
+    exog_test = future_data[exog_columns]
+
+    # Generate the forecast
+    forecast = model.get_forecast(steps=len(future_data), exog=exog_test, alpha=0.2)
+    forecast_ci = forecast.conf_int()
+
+    # Extract the forecasted mean, lower, and upper bounds
+    forecast_mean = pd.Series(forecast.predicted_mean.values, index=future_data.index)
+    forecast_lower = pd.Series(forecast_ci.iloc[:, 0].values, index=future_data.index)
+    forecast_upper = pd.Series(forecast_ci.iloc[:, 1].values, index=future_data.index)
+
+    # Get the forecast at the specified end date
+    if end_date not in forecast_mean.index:
+        raise ValueError(f"The specified end date {end_date} is not within the forecast range.")
+
+    return forecast_mean.loc[end_date]
