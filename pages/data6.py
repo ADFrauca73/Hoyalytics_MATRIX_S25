@@ -51,6 +51,6 @@ with c1:
     if st.button("⬅️ Previous"):
         st.switch_page("pages/data5.py")
 with c2:
-    if st.button("Back to Start"):
-        st.switch_page("pages/data1.py")
+    if st.button("Predictions"):
+        st.switch_page("pages/newtester.py")
 

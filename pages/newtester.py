@@ -8,10 +8,16 @@ import pandas as pd
 
 from utils.unpickling import get_yield_forecast_at_end_date
 
+# Ensure required session state data exists
+if "filtered_df" not in st.session_state:
+    st.error("No data found. Please complete the previous steps.")
+    st.stop()
+
 ######################################################################### ADD HERE
 #exogenous variable final values
 exog_data = st.session_state("filtered_df")
 #########################################################################
+
 
 
 exog_vars = [
@@ -140,12 +146,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Page title
-st.title("Tester Page")
+st.title("Predictions")
 
-# Ensure required session state data exists
-if "filtered_df" not in st.session_state:
-    st.error("No data found. Please complete the previous steps.")
-    st.stop()
 
 st.pyplot(plt)
 
@@ -153,7 +155,7 @@ st.pyplot(plt)
 col1, _, col2 = st.columns([1, 6, 1])
 with col1:
     if st.button("⬅️ Previous", key="prev_btn"):
-        st.switch_page("pages/data3.py")
+        st.switch_page("pages/data6.py")
 with col2:
-    if st.button("Next ➡️", key="next_btn"):
-        st.write("Next page functionality not implemented yet.")
+    if st.button("Back to start", key="back_to_start_btn"):
+        st.switch_page("pages/Dashboard.py")
