@@ -145,4 +145,4 @@ with col1:
         st.switch_page("pages/Dashboard.py")
 with col2:
     if st.button("Next ➡️", key="next"):
-        st.switch_page("pages/data3.py")
+        st.switch_page("pages/data2.py")
