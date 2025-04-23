@@ -3,13 +3,12 @@ import pandas as pd
 import platform
 import subprocess
 import sys
-from utils.all_tariffs import all_tariffs
 
 # ─── Install streamlit-calendar if needed ─────────────────────────────
 try:
     from streamlit_calendar import calendar
 except ImportError:
-    subprocess.run([sys.executable, "-m", "pip", "install", "streamlit-calendar"])
+    subprocess.run([sys.executable, "-m", "pip", "install", "streamlit-calendar"], check=True)
     from streamlit_calendar import calendar
 
 # ─── Setup ─────────────────────────────────────────────────────────────
@@ -43,38 +42,60 @@ st.markdown("""
     margin-top: 1rem;
     color: #cbf0ff;
 }
-/* Smaller calendar font size */
-.fc {
-    font-size: 0.65rem !important;
-}
-.fc .fc-toolbar-title {
-    font-size: 0.8rem !important;
-}
-.fc .fc-daygrid-day-number {
-    font-size: 0.7rem !important;
-}
-.fc .fc-event-title {
-    font-size: 0.65rem !important;
-}
+.fc { font-size: 0.65rem !important; }
+.fc .fc-toolbar-title { font-size: 0.8rem !important; }
+.fc .fc-daygrid-day-number { font-size: 0.7rem !important; }
+.fc .fc-event-title { font-size: 0.65rem !important; }
 </style>
 """, unsafe_allow_html=True)
+
+# ─── Hardcoded Descriptive Tariff Mapping ─────────────────────────────
+label_mapping = {
+    "Chapter 39 – Plastics and articles thereof": "start_tariff_39",
+    "Chapter 40 – Rubber and articles thereof": "start_tariff_40",
+    "Chapter 72 – Iron and steel": "start_tariff_72",
+    "Chapter 73 – Articles of iron or steel": "start_tariff_73",
+    "Chapter 74 – Copper and articles thereof": "start_tariff_74",
+    "Chapter 75 – Nickel and articles thereof": "start_tariff_75",
+    "Chapter 76 – Aluminum and articles thereof": "start_tariff_76",
+    "Chapter 78 – Lead and articles thereof": "start_tariff_78",
+    "Chapter 79 – Zinc and articles thereof": "start_tariff_79",
+    "Chapter 80 – Tin and articles thereof": "start_tariff_80",
+    "Chapter 81 – Other base metals; cermets; articles thereof": "start_tariff_81",
+    "Chapter 82 – Tools, implements, cutlery, spoons and forks, of base metal": "start_tariff_82",
+    "Chapter 83 – Miscellaneous articles of base metal": "start_tariff_83",
+    "Chapter 84 – Nuclear reactors, boilers, machinery and mechanical appliances": "start_tariff_84",
+    "Chapter 85 – Electrical machinery and equipment; sound recorders and reproducers, etc.": "start_tariff_85",
+    "Chapter 86 – Railway or tramway locomotives, rolling-stock, and parts": "start_tariff_86",
+    "Chapter 87 – Vehicles other than railway or tramway rolling-stock": "start_tariff_87",
+    "Chapter 88 – Aircraft, spacecraft, and parts thereof": "start_tariff_88",
+    "Chapter 89 – Ships, boats, and floating structures": "start_tariff_89",
+    "Chapter 90 – Optical, photographic, cinematographic, measuring, checking, precision, medical instruments": "start_tariff_90",
+    "Chapter 96 – Miscellaneous manufactured articles": "start_tariff_96",
+    "Chapter 98 – Special classification provisions (e.g., U.S. goods returned, duty exemptions)": "start_tariff_98"
+}
+column_to_label = {v: k for k, v in label_mapping.items()}
 
 # ─── Page Content ─────────────────────────────────────────────────────
 st.title("Tariff Implementation Dates")
 st.write("Click dates on the calendar for each tariff to mark them for implementation.")
 
 # ─── Preconditions ────────────────────────────────────────────────────
-if "filtered_df" not in st.session_state or "business_days_df" not in st.session_state:
-    st.error("Missing business-day data. Please run the Dashboard page first.")
+if "filtered_df" not in st.session_state or "base_df" not in st.session_state:
+    st.error("Missing required data. Please run the Dashboard page first.")
     st.stop()
 
-df = st.session_state["filtered_df"]
-business_dates = pd.to_datetime(st.session_state["business_days_df"]["Business Day"]).dt.date.tolist()
+# Copy data
+df = st.session_state["filtered_df"].copy()
+base_df = st.session_state["base_df"].copy()
+
+# Prepare dates
+business_dates = pd.to_datetime(base_df["Business Day"]).dt.date.tolist()
 df["Business Day"] = pd.to_datetime(df["Business Day"]).dt.date
 
 selected_tariffs = st.session_state.get("selected_tariffs", [])
 
-# ─── Init calendar picks ──────────────────────────────────────────────
+# ─── Init picks ────────────────────────────────────────────────────────
 if "calendar_picks" not in st.session_state:
     st.session_state["calendar_picks"] = {}
 
@@ -83,7 +104,8 @@ if not selected_tariffs:
     st.warning("No tariffs selected. Please return to the Variables page and choose tariffs to use the calendar.")
 else:
     for tariff in selected_tariffs:
-        st.markdown(f"<div class='tariff-label'>{tariff}</div>", unsafe_allow_html=True)
+        label = column_to_label.get(tariff, tariff)
+        st.markdown(f"<div class='tariff-label'>{label}</div>", unsafe_allow_html=True)
 
         # Load previous picks
         events = []
@@ -112,7 +134,8 @@ else:
             result = calendar(key=f"{tariff}_calendar", options=options)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        if result and "dateClick" in result and "date" in result["dateClick"]:
+        # Record clicks
+        if result and result.get("dateClick") and result["dateClick"].get("date"):
             selected_date = pd.to_datetime(result["dateClick"]["date"]).date()
             if selected_date in business_dates:
                 st.session_state["calendar_picks"].setdefault(tariff, [])
@@ -127,22 +150,26 @@ with save_col:
         changed = []
         picks = st.session_state["calendar_picks"]
         for tariff, days in picks.items():
+            if tariff not in df.columns:
+                df[tariff] = 0
             for day in days:
                 mask = df["Business Day"] == day
                 if not mask.any():
                     continue
                 if df.loc[mask, tariff].values[0] != 1:
                     df.loc[mask, tariff] = 1
-                    changed.append((tariff, str(day)))
+                    changed.append((tariff, day))
         st.session_state["filtered_df"] = df
         if changed:
             st.success("✅ Tariff dates updated:")
             for t, d in changed:
-                st.markdown(f"- **{t}** on **{d}** ➝ `1`")
+                label = column_to_label.get(t, t)
+                st.markdown(f"- **{label}** on **{d}** ➝ `1`")
         else:
             st.info("No new changes were made.")
         st.markdown("### 🧪 Filtered Data Preview")
-        st.dataframe(df[df[selected_tariffs].sum(axis=1) > 0] if selected_tariffs else df)
+        preview = df[df[selected_tariffs].sum(axis=1) > 0] if selected_tariffs else df
+        st.dataframe(preview, use_container_width=True)
 
 with clear_col:
     if st.button("🗑️ Clear All Selections"):

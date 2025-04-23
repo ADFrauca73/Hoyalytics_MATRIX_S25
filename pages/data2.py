@@ -1,199 +1,151 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+from datetime import date
 
-st.set_page_config(page_title="data1", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Consumer Sentiment & VIX",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# ─── Hide Sidebar Navigation ───────────────────────────────
+# ─── Hide Sidebar ─────────────────────────────────────────
 st.markdown("""
     <style>
         [data-testid="stSidebarNav"] { display: none; }
     </style>
 """, unsafe_allow_html=True)
 
-# ─── Custom Styling ───────────────────────────────────────
+# ─── Styling ──────────────────────────────────────────────
 st.markdown("""
 <style>
-  .stApp {
-    background: linear-gradient(180deg, #000000 0%, #072f5f 100%);
-    color: white;
-    font-family: 'Segoe UI', sans-serif;
-  }
-  .section-title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: #cbf0ff;
-    margin-bottom: 1.5rem;
-  }
-  input[type=number] {
-    appearance: textfield;
-    width: 100% !important;
-  }
+  .stApp { background: linear-gradient(180deg,#000 0%,#072f5f 100%); color: white; font-family: 'Segoe UI', sans-serif; }
+  .section-title { font-size:1.75rem; font-weight:700; color:#cbf0ff; margin-bottom:1.5rem; }
+  .label-title { font-weight:600; font-size:1rem; color:#cbf0ff; text-align:center; padding-bottom:0.5rem; }
   .date-box {
-    background-color: rgba(0, 0, 0, 0.7);
-    border-left: 4px solid #58cced;
-    border-radius: 6px;
-    padding: 0.5rem 0;
-    font-weight: 600;
-    font-size: 1rem;
-    color: #cbf0ff;
-    text-align: center;
-    margin-bottom: 0.4rem;
+    background: rgba(0,0,0,0.7); border-left:4px solid #58cced; border-radius:6px;
+    padding:0.5rem; color:#cbf0ff; text-align:center; margin-bottom:0.4rem; font-weight:600;
   }
-  .label-title {
-    font-weight: 600;
-    font-size: 1rem;
-    color: #cbf0ff;
-    text-align: center;
-    padding-bottom: 0.5rem;
+  .stButton>button {
+    background:linear-gradient(90deg,#3895d3,#58cced);
+    color:white!important; font-weight:600; padding:0.6rem 2rem;
+    border:none; border-radius:6px;
   }
-  .stButton > button {
-    background: linear-gradient(90deg, #3895d3, #58cced);
-    color: white !important;
-    font-weight: 600;
-    padding: 0.6rem 2rem;
-    border: none;
-    border-radius: 6px;
-  }
-  .stButton > button:hover {
-    box-shadow: 0 0 10px #58cced, 0 0 20px #58cced;
-  }
+  .stButton>button:hover { box-shadow:0 0 10px #58cced,0 0 20px #58cced; }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("<div class='section-title'>Enter Consumer Sentiment and VIX Data</div>", unsafe_allow_html=True)
+st.markdown(
+    "<div class='section-title'>Enter Consumer Sentiment and VIX Data</div>",
+    unsafe_allow_html=True
+)
 
 # ─── Load & Validate Data ─────────────────────────────────
 if "filtered_df" not in st.session_state:
     st.error("No business day data found. Please run the Dashboard page first.")
     st.stop()
 
+# Copy & index by Business Day
 df = st.session_state["filtered_df"].copy()
 df["Business Day"] = pd.to_datetime(df["Business Day"])
+df.set_index("Business Day", inplace=True)
 
-# Ensure columns exist
-for col in ["Consumer Sentiment", "VIX"]:
+today = pd.to_datetime(date.today())
+
+# ─── Ensure Columns Exist ────────────────────────────────
+for col in ["diff_CSD", "VIX_close"]:
     if col not in df.columns:
-        df[col] = pd.NA
+        df[col] = np.nan
+df["diff_CSD"]  = pd.to_numeric(df["diff_CSD"], errors="coerce")
+df["VIX_close"] = pd.to_numeric(df["VIX_close"], errors="coerce")
 
-df["Consumer Sentiment"] = pd.to_numeric(df["Consumer Sentiment"], errors="coerce")
-df["VIX"] = pd.to_numeric(df["VIX"], errors="coerce")
+# ─── Define Editable Range ───────────────────────────────
+editable_mask = df.index >= today
+editable_df   = df.loc[editable_mask]
 
-# ─── Ask for previous‐day sentiment ───────────────────────────
-first_date = df["Business Day"].min().strftime("%Y-%m-%d")
-prev_sentiment = st.number_input(
-    f"Consumer Sentiment on the day before {first_date}",
-    value=50.0,
-    step=None,
-    format="%.2f",
-    help="This is your 'day 0' baseline, used to compute the first delta."
-)
-
-# ─── User Input Interval Selection ────────────────────────
-spacing_options = {
-    "2 weeks": pd.Timedelta(weeks=2),
-    "Half month": pd.Timedelta(days=15),
-    "3 months": pd.DateOffset(months=3),
-    "6 months": pd.DateOffset(months=6),
-    "12 months": pd.DateOffset(months=12),
-    "All": None
-}
-
-min_date, max_date = df["Business Day"].min(), df["Business Day"].max()
-valid_options = []
-for label, offset in spacing_options.items():
-    if offset is None:
-        valid_options.append(label)
-    else:
-        count, temp = 0, min_date
-        while temp <= max_date:
-            count += 1
-            temp += offset
-        if count <= len(df):
-            valid_options.append(label)
-
-time_range = st.selectbox("How frequently would you like to enter data?", valid_options)
-spacing = spacing_options[time_range]
-
-# ─── Filter Dates to Display ──────────────────────────────
-if spacing is None:
-    display_df = df.copy()
-else:
-    spaced = []
-    current = min_date
-    while current <= max_date:
-        match = df[df["Business Day"] >= current]
-        if not match.empty:
-            spaced.append(match.iloc[0]["Business Day"])
-        current += spacing
-    if max_date not in spaced:
-        spaced.append(max_date)
-    display_df = df[df["Business Day"].isin(spaced)].copy()
-
-# ─── Input Interface ──────────────────────────────────────
+# ─── Build Input UI ───────────────────────────────────────
 inputs = {}
 col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("<div class='label-title'>Date</div>", unsafe_allow_html=True)
 with col2:
-    st.markdown("<div class='label-title'>Consumer Sentiment</div>", unsafe_allow_html=True)
+    st.markdown("<div class='label-title'>Cumulative CSD</div>", unsafe_allow_html=True)
 with col3:
-    st.markdown("<div class='label-title'>VIX</div>", unsafe_allow_html=True)
+    st.markdown("<div class='label-title'>VIX Close</div>", unsafe_allow_html=True)
 
-for i, row in display_df.iterrows():
-    date_str = row["Business Day"].strftime("%Y-%m-%d")
+for i, (day, row) in enumerate(editable_df.iterrows()):
+    date_str = day.strftime("%Y-%m-%d")
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown(f"<div class='date-box'>{date_str}</div>", unsafe_allow_html=True)
     with c2:
-        sent = st.number_input(
-            "Consumer Sentiment", label_visibility="collapsed",
-            key=f"sentiment_{i}",
-            value=float(row["Consumer Sentiment"]) if pd.notna(row["Consumer Sentiment"]) else 50.0,
-            step=None, format="%.2f"
+        csd_cum = st.number_input(
+            "CSD", key=f"cs_{i}", label_visibility="collapsed",
+            value=float(row["diff_CSD"]) if not np.isnan(row["diff_CSD"]) else 0.0,
+            format="%.2f"
         )
     with c3:
         vix = st.number_input(
-            "VIX", label_visibility="collapsed",
-            key=f"vix_{i}",
-            value=float(row["VIX"]) if pd.notna(row["VIX"]) else 20.0,
-            step=None, format="%.2f"
+            "VIX", key=f"vix_{i}", label_visibility="collapsed",
+            value=float(row["VIX_close"]) if not np.isnan(row["VIX_close"]) else 0.0,
+            format="%.2f"
         )
-    inputs[date_str] = {"Consumer Sentiment": sent, "VIX": vix}
+    inputs[date_str] = {"cum_CSD": csd_cum, "VIX_close": vix}
 
-# ─── Save, Interpolate & Difference ───────────────────────
+# ─── Save & Process ───────────────────────────────────────
 _, center, _ = st.columns([4,1,4])
 with center:
-    if st.button("Save Data", key="save"):
-        # Clear existing
-        df["Consumer Sentiment"] = pd.NA
-        df["VIX"] = pd.NA
+    if st.button("Save Data"):
+        # 1) Gather raw cumulative CSD inputs (0.0 → NaN for interpolate)
+        raw_cum = {
+            pd.to_datetime(dstr): vals["cum_CSD"] if vals["cum_CSD"] != 0.0 else np.nan
+            for dstr, vals in inputs.items()
+        }
 
-        # Fill user inputs
-        for _, row in display_df.iterrows():
-            ds = row["Business Day"].strftime("%Y-%m-%d")
-            df.loc[df["Business Day"] == row["Business Day"], "Consumer Sentiment"] = inputs[ds]["Consumer Sentiment"]
-            df.loc[df["Business Day"] == row["Business Day"], "VIX"] = inputs[ds]["VIX"]
+        # 2) Build a Series over every editable date
+        cum_series = pd.Series(raw_cum).reindex(editable_df.index)
 
-        # Interpolate raw series
-        df["Consumer Sentiment"] = pd.to_numeric(df["Consumer Sentiment"], errors="coerce").interpolate(method="linear")
-        df["VIX"] = pd.to_numeric(df["VIX"], errors="coerce").interpolate(method="linear")
+        # 3) Interpolate forward & fill leading NaNs with 0 (just like VIX)
+        cum_series = (
+            cum_series
+            .interpolate(method="linear", limit_direction="forward")
+            .fillna(0.0)
+        )
 
-        # Compute day-over-day changes, using prev_sentiment for the first delta
-        raw = df["Consumer Sentiment"].tolist()
-        changes = [raw[0] - prev_sentiment] + [raw[i] - raw[i-1] for i in range(1, len(raw))]
-        df["Consumer Sentiment"] = changes
+        # 4) Compute diff_CSD as day-over-day delta of that smooth curve
+        diff_series = cum_series.diff().fillna(cum_series)
 
-        # Save back and preview
+        # 5) Write diff_CSD back into DataFrame
+        df.loc[editable_mask, "diff_CSD"] = diff_series.values
+
+        # 6) Overwrite VIX inputs and interpolate as before
+        df.loc[editable_mask, "VIX_close"] = [
+            inputs[d.strftime("%Y-%m-%d")]["VIX_close"]
+            for d in editable_df.index
+        ]
+        v = df.loc[editable_mask, "VIX_close"].replace(0, np.nan)
+        df.loc[editable_mask, "VIX_close"] = (
+            v.interpolate(method="linear", limit_direction="forward")
+             .fillna(0)
+        )
+
+        # 7) Commit & preview
+        df.reset_index(inplace=True)
         st.session_state["filtered_df"] = df
-        st.success("Consumer Sentiment converted to daily changes; VIX remains level.")
+        st.success(
+            "Data saved:\n"
+            "- `diff_CSD` interpolated on your cumulative inputs and then differenced\n"
+            "- `VIX_close` forward‐interpolated over gaps"
+        )
         st.markdown("### Preview")
-        st.dataframe(df[["Business Day", "Consumer Sentiment", "VIX"]].reset_index(drop=True))
+        st.dataframe(df, use_container_width=True)
 
-# ─── Navigation Buttons ───────────────────────────────────
+# ─── Navigation ───────────────────────────────────────────
 c1, _, c2 = st.columns([1,6,1])
 with c1:
-    if st.button("⬅️ Previous", key="prev_btn"):
+    if st.button("⬅️ Previous"):
         st.switch_page("pages/data1.py")
 with c2:
-    if st.button("Next ➡️", key="next_btn"):
+    if st.button("Next ➡️"):
         st.switch_page("pages/data3.py")
+############### DO NOT FUCKING CHANGE THIS LINE ###############
