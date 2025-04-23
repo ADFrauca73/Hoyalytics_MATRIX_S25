@@ -1,5 +1,6 @@
 import streamlit as st
 from utils.all_tariffs import all_tariffs
+import pandas as pd
 
 st.set_page_config(page_title="data1", layout="wide", initial_sidebar_state="collapsed")
 
@@ -58,6 +59,28 @@ st.markdown("""
 # ——— Data Placeholder ———
 st.markdown('<div class="data-box">📊 <strong>Placeholder for Data Display</strong></div>', unsafe_allow_html=True)
 
+# ——— Select tariff dates ———
+if "filtered_df" in st.session_state:
+    selected_tariffs = [tariff for tariff in st.session_state["filtered_df"].columns if tariff in all_tariffs]
+    st.write("Selected Tariffs:", selected_tariffs)
+    
+    # ——— Dropdown for each selected tariff ———
+    if "business_days_df" in st.session_state:
+        business_days = st.session_state["business_days_df"]["Business Day"].tolist()
+        for tariff in selected_tariffs:
+            selected_days = st.multiselect(
+                f"Select dates for {tariff}",
+                options=business_days,
+                key=f"{tariff}_selected_dates"
+            )
+            
+            # Update the filtered_df columns based on selected days
+            for day in selected_days:
+                st.session_state["filtered_df"].loc[
+                    st.session_state["filtered_df"]["Business Day"] == day, tariff
+                ] = 1
+
+    st.write("Updated DataFrame:", st.session_state["filtered_df"])
 # ——— Navigation Buttons ———
 col1, col2, col3 = st.columns([1, 5, 1])
 
