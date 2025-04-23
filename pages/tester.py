@@ -1,4 +1,7 @@
 import streamlit as st
+import pandas as pd
+
+from utils.unpickling import YieldForecastCalculator
 
 # Set up the page configuration
 st.set_page_config(page_title="Tester Page", layout="wide", initial_sidebar_state="collapsed")
@@ -13,13 +16,33 @@ st.markdown("""
 # Page title
 st.title("Tester Page")
 
-# Check if required session state data exists
+# Ensure required session state data exists
 if "filtered_df" not in st.session_state:
     st.error("No data found. Please complete the previous steps.")
     st.stop()
 
-# Display a placeholder for future content
-st.write("This is the Tester page. Add your content here.")
+# Perform yield prediction calculations
+st.subheader("Yield Prediction Results")
+try:
+    # Initialize the YieldForecastCalculator with the filtered DataFrame
+    filtered_df = st.session_state["filtered_df"]
+    calculator = YieldForecastCalculator(filtered_df)
+
+    # Get the forecasted yields
+    forecasts = calculator.get_forecast()
+    prediction_intervals = calculator.get_prediction_intervals()
+
+    # Display the forecasted yields
+    for maturity, forecast in forecasts.items():
+        st.write(f"### {maturity} Yield Forecast")
+        st.line_chart(forecast)
+
+    # Plot the forecasts with confidence intervals
+    st.subheader("Yield Forecast Graphs")
+    calculator.plot_forecasts()
+
+except Exception as e:
+    st.error(f"An error occurred during yield prediction: {e}")
 
 # Navigation buttons
 col1, _, col2 = st.columns([1, 6, 1])

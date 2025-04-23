@@ -1,7 +1,7 @@
 non_tariff_columns = [
-    "Consumer Sentiment",
-    "VIX",
-    "Inflation",
-    "FFR",
-    "M1 Supply"
+    "diff_CSD",
+    "VIX_close",
+    "diff_CPI",
+    "diff_FFR",
+    "diff_M1_supply"
 ]
