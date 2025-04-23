@@ -15,7 +15,7 @@ if "filtered_df" not in st.session_state:
 
 ######################################################################### ADD HERE
 #exogenous variable final values
-exog_data = st.session_state("filtered_df")
+exog_data = st.session_state["filtered_df"]
 #########################################################################
 
 
@@ -120,14 +120,19 @@ for maturity, model in zip(maturities, file_names):
 
 # Create a graph showing the predicted yields
 import matplotlib.pyplot as plt
+
+# Apply the theme
+plt.style.use('dark_background')
+
 # Plot the predicted yields
 plt.figure(figsize=(10, 6))
-plt.plot(output.keys(), output.values(), marker='o', linestyle='-', color='b')
-plt.title('Predicted Yields by Maturity')
-plt.xlabel('Maturity (Years)')
-plt.ylabel('Yield')
-plt.grid(True)
-plt.xticks(maturities)  # Ensure x-axis ticks match maturities
+plt.plot(output.keys(), output.values(), marker='o', linestyle='-', color='#3895d3')
+plt.title('Predicted Yields by Maturity', color='#FFFFFF', fontsize=16)
+plt.xlabel('Maturity (Years)', color='#FFFFFF', fontsize=12)
+plt.ylabel('Yield', color='#FFFFFF', fontsize=12)
+plt.grid(True, color='#072f5f')
+plt.xticks(maturities, color='#FFFFFF')  # Ensure x-axis ticks match maturities
+plt.yticks(color='#FFFFFF')
 plt.tight_layout()
 
 import streamlit as st
