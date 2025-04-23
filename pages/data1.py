@@ -99,6 +99,9 @@ with right_col:
 
 # ─── Apply Button ─────────────────────────────────────────
 if st.button("Apply Selections", use_container_width=True):
+    st.session_state["FFR_BOOL"] = "Inflation / FFR" in new_var_selection
+    st.session_state["VIX_BOOL"] = "Consumer Sentiment / VIX" in new_var_selection
+    st.session_state["M1_BOOL"] = "M1 Supply" in new_var_selection
     st.session_state["selected_vars"] = new_var_selection
     st.session_state["selected_tariffs"] = selected_tariff_columns
 
