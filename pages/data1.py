@@ -54,64 +54,95 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Title ───────────────────────────────────────────────────────────────
-st.markdown("<div class='page-title'>Select Variables to Display</div>", unsafe_allow_html=True)
+# ─── Initialize session state ───────────────────────────────────────────
+if "selected_vars" not in st.session_state:
+    st.session_state["selected_vars"] = []
+if "selected_tariffs" not in st.session_state:
+    st.session_state["selected_tariffs"] = []
+if "filtered_df" not in st.session_state:
+    st.session_state["filtered_df"] = None
 
-# ─── Layout ──────────────────────────────────────────────────────────────
+# ─── UI Layout ───────────────────────────────────────────────────────────
+st.markdown("<div class='page-title'>Select Variables to Display</div>", unsafe_allow_html=True)
 left_col, right_col = st.columns([3, 2], gap="large")
 
-# Variables Section
+# ─── Variable selection ─────────────────────────────────────────────────
 with left_col:
-    st.markdown("<div class='section-title'> Include these:</div>", unsafe_allow_html=True)
-    all_vars = ["Consumer Sentiment / VIX", "M1 Supply", "Inflation / FFR"]
-    selected_vars = []
+    st.markdown("<div class='section-title'>Include these:</div>", unsafe_allow_html=True)
+    all_options = ["Consumer Sentiment / VIX", "M1 Supply", "Inflation / FFR"]
+    new_var_selection = st.multiselect(
+        "Select variables",
+        options=all_options,
+        default=st.session_state["selected_vars"]
+    )
 
-    for var in all_vars:
-        if st.checkbox(var, value=var in st.session_state.get("selected_vars", [])):
-            selected_vars.append(var)
-
-    st.session_state["selected_vars"] = selected_vars
-    st.markdown(f"**Currently selected:** {', '.join(selected_vars) if selected_vars else 'None'}")
-
-# Tariff Section
+# ─── Tariff selection ───────────────────────────────────────────────────
 with right_col:
-    st.markdown("<div class='section-title'> Tariffs Detail</div>", unsafe_allow_html=True)
-    
-    selected_tariffs = st.multiselect("Choose a tariff", options=["None"] + all_tariffs)
+    st.markdown("<div class='section-title'>Tariffs Detail</div>", unsafe_allow_html=True)
+    all_tariffs = [
+        "Chapter 39 – Plastics and articles thereof",
+        "Chapter 40 – Rubber and articles thereof",
+        "Chapter 72 – Iron and steel",
+        "Chapter 73 – Articles of iron or steel",
+        "Chapter 74 – Copper and articles thereof",
+        "Chapter 75 – Nickel and articles thereof",
+        "Chapter 76 – Aluminum and articles thereof",
+        "Chapter 78 – Lead and articles thereof",
+        "Chapter 79 – Zinc and articles thereof",
+        "Chapter 80 – Tin and articles thereof",
+        "Chapter 81 – Other base metals; cermets; articles thereof",
+        "Chapter 82 – Tools, implements, cutlery, spoons and forks, of base metal",
+        "Chapter 83 – Miscellaneous articles of base metal",
+        "Chapter 84 – Nuclear reactors, boilers, machinery and mechanical appliances",
+        "Chapter 85 – Electrical machinery and equipment; sound recorders and reproducers, etc.",
+        "Chapter 86 – Railway or tramway locomotives, rolling-stock, and parts",
+        "Chapter 87 – Vehicles other than railway or tramway rolling-stock",
+        "Chapter 88 – Aircraft, spacecraft, and parts thereof",
+        "Chapter 89 – Ships, boats, and floating structures",
+        "Chapter 90 – Optical, photographic, cinematographic, measuring, checking, precision, medical instruments",
+        "Chapter 96 – Miscellaneous manufactured articles",
+        "Chapter 98 – Special classification provisions (e.g., U.S. goods returned, duty exemptions)"
+    ]
+    new_tariff_selection = st.multiselect("Choose a tariff", options=["None"] + all_tariffs, default=st.session_state["selected_tariffs"])
+    if "None" in new_tariff_selection and len(new_tariff_selection) > 1:
+        new_tariff_selection.remove("None")
+    elif "None" in new_tariff_selection:
+        new_tariff_selection = []
 
-    # Remove "None" if others are selected
-    if "None" in selected_tariffs and len(selected_tariffs) > 1:
-        selected_tariffs.remove("None")
-    elif "None" in selected_tariffs:
-        selected_tariffs = []
+# ─── Apply changes manually ─────────────────────────────────────────────
+if st.button("Apply Selections", use_container_width=True):
+    st.session_state["selected_vars"] = new_var_selection
+    st.session_state["selected_tariffs"] = new_tariff_selection
 
-    st.session_state["selected_tariffs"] = selected_tariffs
+    if st.session_state["filtered_df"] is not None:
+        df = st.session_state["filtered_df"][["Business Day"]].copy()
 
-# ——— Apply to DataFrame ———
-if "filtered_df" in st.session_state:
-    df = st.session_state["filtered_df"].copy()
+        if "Consumer Sentiment / VIX" in new_var_selection:
+            df["Consumer Sentiment"] = 0
+            df["VIX"] = 0
+        if "Inflation / FFR" in new_var_selection:
+            df["Inflation"] = 0
+            df["FFR"] = 0
+        if "M1 Supply" in new_var_selection:
+            df["M1 Supply"] = 0
 
-    # Drop all columns that might have been previously added
-    for col in all_vars + all_tariffs:
-        if col in df.columns:
-            df.drop(columns=[col], inplace=True)
+        for tariff in new_tariff_selection:
+            df[tariff] = 0
 
-    # Add selected vars and tariffs as new 0-filled columns
-    for col in selected_vars + selected_tariffs:
-        df[col] = 0
+        st.session_state["filtered_df"] = df
+        st.success("Selections applied to dataset.")
+    else:
+        st.warning("No business day data found. Please run the Dashboard page first.")
 
-    st.dataframe(df)
+# ─── Show updated dataframe ─────────────────────────────────────────────
+if st.session_state["filtered_df"] is not None:
+    st.dataframe(st.session_state["filtered_df"])
 
-    # Optional: update stored df
-    st.session_state["filtered_df"] = df
-else:
-    st.warning("No business day data found. Please run the Dashboard page first.")
-
-# Nav buttons
+# ─── Nav buttons ─────────────────────────────────────────────────────────
 col1, _, col2 = st.columns([1, 6, 1])
 with col1:
-    if st.button("⬅️ Previous"):
+    if st.button("⬅️ Previous", key="prev"):
         st.switch_page("pages/Dashboard.py")
 with col2:
-    if st.button("Next ➡️"):
-        st.switch_page("pages/data2.py")
+    if st.button("Next ➡️", key="next"):
+        st.switch_page("pages/data3.py")
