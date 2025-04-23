@@ -128,6 +128,6 @@ with c1:
         st.switch_page("pages/data3.py")
 with c2:
     if st.button("Next ➡️"):
-        st.switch_page("pages/data5.py")
+        st.switch_page("pages/date5.py")
 
 ############### DO NOT FUCKING CHANGE THIS LINE ###############
