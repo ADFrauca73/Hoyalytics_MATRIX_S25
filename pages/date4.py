@@ -201,7 +201,7 @@ with center:
 c1, _, c2 = st.columns([1, 6, 1])
 with c1:
     if st.button("⬅️ Previous", key="prev_btn"):
-        st.switch_page("pages/data1.py")
+        st.switch_page("pages/data2.py")
 with c2:
     if st.button("Next ➡️", key="next_btn"):
-        st.switch_page("pages/data3.py")
+        st.switch_page("pages/tester.py")
