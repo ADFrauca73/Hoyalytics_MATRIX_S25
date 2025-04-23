@@ -5,76 +5,9 @@ import matplotlib.pyplot as plt
 
 from utils.all_tariffs import all_tariffs
 from utils.all_maturities import all_maturities 
-from utils.all_models import all_models
-from utils.non_tariff_columns import non_tariff_columns
+#from utils.all_models import all_models
+#from utils.non_tariff_columns import non_tariff_columns
 
-
-# for debugging purposes
-all_models = [
-    "arima_model_2-year_monthly_tariff_ffr_cpi_m1.pkl",
-    "arima_model_7-year_monthly_tariff_ffr_cpi_m1.pkl",
-    "arima_model_2-year_monthly_tariff_vix_cs_m1.pkl",
-    "arima_model_7-year_monthly_tariff_vix_cs.pkl",
-    "arima_model_20-year_monthly_tariff_ffr_cpi_m1.pkl",
-    "arima_model_5-year_monthly_tariff.pkl",
-    "arima_model_2-year_monthly_tariff_m1.pkl",
-    "arima_model_3-year_monthly_tariff_m1.pkl",
-    "arima_model_5-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
-    "arima_model_5-year_monthly_tariff_ffr_cpi_m1.pkl",
-    "arima_model_10-year_monthly_tariff_vix_cs_m1.pkl",
-    "arima_model_7-year_monthly_tariff_vix_cs_m1.pkl",
-    "arima_model_20-year_monthly_tariff.pkl",
-    "arima_model_3-year_monthly_tariff_vix_cs_m1.pkl",
-    "arima_model_3-year_monthly_tariff_ffr_cpi_m1.pkl",
-    "arima_model_10-year_monthly_tariff_ffr_cpi_m1.pkl",
-    "arima_model_5-year_monthly_tariff_m1.pkl",
-    "arima_model_5-year_monthly_tariff_vix_cs.pkl",
-    "arima_model_20-year_monthly_tariff_vix_cs.pkl",
-    "arima_model_5-year_monthly_tariff_vix_cs_m1.pkl",
-    "arima_model_20-year_monthly_tariff_ffr_cpi.pkl",
-    "arima_model_10-year_monthly_tariff_ffr_cpi.pkl",
-    "arima_model_20-year_monthly_tariff_vix_cs_m1.pkl",
-    "arima_model_5-year_monthly_tariff_ffr_cpi.pkl",
-    "arima_model_10-year_monthly_tariff_m1.pkl",
-    "arima_model_2-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
-    "arima_model_2-year_monthly_tariff_vix_cs.pkl",
-    "arima_model_10-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
-    "arima_model_3-year_monthly_tariff_ffr_cpi.pkl",
-    "arima_model_20-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
-    "arima_model_7-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
-]
-all_maturities = [2, 3, 5, 7, 10, 20]
-non_tariff_columns = [
-    "Consumer Sentiment",
-    "VIX",
-    "Inflation",
-    "FFR",
-    "M1 Supply"
-]
-all_tariffs = [
-    "Chapter 39 – Plastics and articles thereof",
-    "Chapter 40 – Rubber and articles thereof",
-    "Chapter 72 – Iron and steel",
-    "Chapter 73 – Articles of iron or steel",
-    "Chapter 74 – Copper and articles thereof",
-    "Chapter 75 – Nickel and articles thereof",
-    "Chapter 76 – Aluminum and articles thereof",
-    "Chapter 78 – Lead and articles thereof",
-    "Chapter 79 – Zinc and articles thereof",
-    "Chapter 80 – Tin and articles thereof",
-    "Chapter 81 – Other base metals; cermets; articles thereof",
-    "Chapter 82 – Tools, implements, cutlery, spoons and forks, of base metal",
-    "Chapter 83 – Miscellaneous articles of base metal",
-    "Chapter 84 – Nuclear reactors, boilers, machinery and mechanical appliances",
-    "Chapter 85 – Electrical machinery and equipment; sound recorders and reproducers, etc.",
-    "Chapter 86 – Railway or tramway locomotives, rolling-stock, and parts",
-    "Chapter 87 – Vehicles other than railway or tramway rolling-stock",
-    "Chapter 88 – Aircraft, spacecraft, and parts thereof",
-    "Chapter 89 – Ships, boats, and floating structures",
-    "Chapter 90 – Optical, photographic, cinematographic, measuring, checking, precision, medical instruments",
-    "Chapter 96 – Miscellaneous manufactured articles",
-    "Chapter 98 – Special classification provisions (e.g., U.S. goods returned, duty exemptions)"
-]
 
 class YieldForecastCalculator:
     def __init__(self, future_data):
@@ -85,37 +18,44 @@ class YieldForecastCalculator:
         future_data (pd.DataFrame): DataFrame containing the future data with exogenous variables.
         """
         self.future_data = future_data
-        self.exog_columns = [col for col in future_data.columns if col != "Business Day"]
+        self.exog_columns = [col for col in future_data.columns if col != "date"]
         self.predictions = {}
         self._validate_inputs()
         self._load_models_and_predict()
 
     def _validate_inputs(self):
         """
-        Validates the input exogenous columns to determine the model type.
+        Validates the input exogenous columns and determines the model type.
         """
         contains_tariff = any(tariff in self.exog_columns for tariff in all_tariffs)
-        contains_non_tariff = any(non_tariff in self.exog_columns for non_tariff in non_tariff_columns)
+        if not contains_tariff:
+            # Ensure all tariff columns are present and set to 0 if missing
+            for tariff in all_tariffs:
+                if tariff not in self.future_data.columns:
+                    self.future_data[tariff] = 0
+            self.exog_columns.extend(all_tariffs)
 
-        if contains_tariff and contains_non_tariff:
-            if all(non_tariff in self.exog_columns for non_tariff in ["FFR", "Inflation", "M1 Supply"]):
-                self.model_type = "tariff_ffr_cpi_m1"
-            elif all(non_tariff in self.exog_columns for non_tariff in ["VIX", "M1 Supply"]):
-                self.model_type = "tariff_vix_cs_m1"
-            elif "VIX" in self.exog_columns:
-                self.model_type = "tariff_vix_cs"
-            elif all(non_tariff in self.exog_columns for non_tariff in ["FFR", "Inflation", "VIX", "M1 Supply"]):
-                self.model_type = "tariff_ffr_cpi_vix_cs"
-            elif "M1 Supply" in self.exog_columns:
-                self.model_type = "tariff_m1"
-            elif all(non_tariff in self.exog_columns for non_tariff in ["FFR", "Inflation"]):
-                self.model_type = "tariff_ffr_cpi"
-            else:
-                raise ValueError("The exog_columns must contain valid non-tariff columns for the selected tariff model.")
-        elif contains_non_tariff:
-            raise ValueError("Non-tariff columns are present without any tariff columns. At least one tariff column is required.")
+        # Determine model type based on non-tariff columns
+        contains_ffr_cpi = all(non_tariff in self.exog_columns for non_tariff in ["FFR", "Inflation"])
+        contains_vix_cs = all(non_tariff in self.exog_columns for non_tariff in ["VIX", "Consumer Sentiment"])
+        contains_m1 = "M1 Supply" in self.exog_columns
+
+        if contains_ffr_cpi and contains_vix_cs and contains_m1:
+            self.model_type = "tariff_ffr_cpi_vix_cs_m1"
+        elif contains_ffr_cpi and contains_vix_cs:
+            self.model_type = "tariff_ffr_cpi_vix_cs"
+        elif contains_ffr_cpi and contains_m1:
+            self.model_type = "tariff_ffr_cpi_m1"
+        elif contains_vix_cs and contains_m1:
+            self.model_type = "tariff_vix_cs_m1"
+        elif contains_ffr_cpi:
+            self.model_type = "tariff_ffr_cpi"
+        elif contains_vix_cs:
+            self.model_type = "tariff_vix_cs"
+        elif contains_m1:
+            self.model_type = "tariff_m1"
         else:
-            raise ValueError("The exog_columns must contain at least one tariff or non-tariff column.")
+            raise ValueError("The exog_columns must contain valid non-tariff columns for the selected tariff model.")
 
     def _load_models_and_predict(self):
         """
@@ -147,7 +87,7 @@ class YieldForecastCalculator:
         with open(model_pickle_path, 'rb') as f:
             model = pickle.load(f)
 
-        self.future_data.index = pd.to_datetime(self.future_data.index)
+        self.future_data.index = pd.to_datetime(self.future_data.index).to_period("M")
         exog_test = self.future_data[self.exog_columns]
 
         forecast = model.get_forecast(steps=len(self.future_data), exog=exog_test, alpha=0.2)
@@ -158,6 +98,27 @@ class YieldForecastCalculator:
         forecast_mean = pd.Series(forecast.predicted_mean.values, index=self.future_data.index)
 
         return forecast_mean, forecast_lower, forecast_upper
+
+    def plot_forecasts(self):
+        """
+        Plots the forecasted yields for all maturities on a single graph.
+        """
+        plt.figure(figsize=(12, 8))
+        for maturity, data in self.predictions.items():
+            plt.plot(data["mean"].index, data["mean"].values, label=f"{maturity} Mean")
+            plt.fill_between(
+                data["mean"].index,
+                data["lower"].values,
+                data["upper"].values,
+                alpha=0.2,
+                label=f"{maturity} Confidence Interval"
+            )
+        plt.title("Yield Forecasts")
+        plt.xlabel("Date")
+        plt.ylabel("Yield")
+        plt.legend()
+        plt.grid()
+        plt.show()
 
     def get_forecast(self):
         """
