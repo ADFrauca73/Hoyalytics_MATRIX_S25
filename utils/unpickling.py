@@ -5,23 +5,43 @@ import matplotlib.pyplot as plt
 
 from utils.all_tariffs import all_tariffs
 from utils.all_maturities import all_maturities 
-from utils.all_models import get_all_models
+from utils.all_models import all_models
 from utils.non_tariff_columns import non_tariff_columns
-#model_files = get_all_models()
+
 
 # for debugging purposes
-model_files = [
+all_models = [
+    "arima_model_2-year_monthly_tariff_ffr_cpi_m1.pkl",
     "arima_model_7-year_monthly_tariff_ffr_cpi_m1.pkl",
     "arima_model_2-year_monthly_tariff_vix_cs_m1.pkl",
+    "arima_model_7-year_monthly_tariff_vix_cs.pkl",
     "arima_model_20-year_monthly_tariff_ffr_cpi_m1.pkl",
+    "arima_model_5-year_monthly_tariff.pkl",
+    "arima_model_2-year_monthly_tariff_m1.pkl",
+    "arima_model_3-year_monthly_tariff_m1.pkl",
+    "arima_model_5-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
     "arima_model_5-year_monthly_tariff_ffr_cpi_m1.pkl",
     "arima_model_10-year_monthly_tariff_vix_cs_m1.pkl",
     "arima_model_7-year_monthly_tariff_vix_cs_m1.pkl",
+    "arima_model_20-year_monthly_tariff.pkl",
     "arima_model_3-year_monthly_tariff_vix_cs_m1.pkl",
     "arima_model_3-year_monthly_tariff_ffr_cpi_m1.pkl",
     "arima_model_10-year_monthly_tariff_ffr_cpi_m1.pkl",
+    "arima_model_5-year_monthly_tariff_m1.pkl",
+    "arima_model_5-year_monthly_tariff_vix_cs.pkl",
+    "arima_model_20-year_monthly_tariff_vix_cs.pkl",
     "arima_model_5-year_monthly_tariff_vix_cs_m1.pkl",
+    "arima_model_20-year_monthly_tariff_ffr_cpi.pkl",
+    "arima_model_10-year_monthly_tariff_ffr_cpi.pkl",
     "arima_model_20-year_monthly_tariff_vix_cs_m1.pkl",
+    "arima_model_5-year_monthly_tariff_ffr_cpi.pkl",
+    "arima_model_10-year_monthly_tariff_m1.pkl",
+    "arima_model_2-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
+    "arima_model_2-year_monthly_tariff_vix_cs.pkl",
+    "arima_model_10-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
+    "arima_model_3-year_monthly_tariff_ffr_cpi.pkl",
+    "arima_model_20-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
+    "arima_model_7-year_monthly_tariff_ffr_cpi_vix_cs.pkl",
 ]
 all_maturities = [2, 3, 5, 7, 10, 20]
 non_tariff_columns = [
@@ -56,141 +76,115 @@ all_tariffs = [
     "Chapter 98 – Special classification provisions (e.g., U.S. goods returned, duty exemptions)"
 ]
 
-def predict_single_yield(model_pickle_path, future_data, exog_columns):
-    """
-    Predicts and returns the yield for a specific maturity using a pre-trained model
+class YieldForecastCalculator:
+    def __init__(self, future_data):
+        """
+        Initializes the YieldForecastCalculator with future data and exogenous columns.
 
-    Parameters:
-    model_pickle_path (str): Path to the pickled model file.
-    future_data (pd.DataFrame): DataFrame containing the future data with exogenous variables.
-    exog_columns (list): List of column names for exogenous variables.
+        Parameters:
+        future_data (pd.DataFrame): DataFrame containing the future data with exogenous variables.
+        """
+        self.future_data = future_data
+        self.exog_columns = [col for col in future_data.columns if col != "Business Day"]
+        self.predictions = {}
+        self._validate_inputs()
+        self._load_models_and_predict()
 
-    Returns:
-    the predicted yield for the future period, a lower bound, and an upper bound for the confidence interval
-    """
-    # Load the model
-    with open(model_pickle_path, 'rb') as f:
-        result = pickle.load(f)
+    def _validate_inputs(self):
+        """
+        Validates the input exogenous columns to determine the model type.
+        """
+        contains_tariff = any(tariff in self.exog_columns for tariff in all_tariffs)
+        contains_non_tariff = any(non_tariff in self.exog_columns for non_tariff in non_tariff_columns)
 
-    # Prepare the future data
-    future_data.index = pd.to_datetime(future_data.index)
-    #start = future_data.index[0]
-    #end = future_data.index[-1]
-    exog_test = future_data[exog_columns]  # Replace with your actual column names
+        if contains_tariff and contains_non_tariff:
+            if all(non_tariff in self.exog_columns for non_tariff in ["FFR", "Inflation", "M1 Supply"]):
+                self.model_type = "tariff_ffr_cpi_m1"
+            elif all(non_tariff in self.exog_columns for non_tariff in ["VIX", "M1 Supply"]):
+                self.model_type = "tariff_vix_cs_m1"
+            elif "VIX" in self.exog_columns:
+                self.model_type = "tariff_vix_cs"
+            elif all(non_tariff in self.exog_columns for non_tariff in ["FFR", "Inflation", "VIX", "M1 Supply"]):
+                self.model_type = "tariff_ffr_cpi_vix_cs"
+            elif "M1 Supply" in self.exog_columns:
+                self.model_type = "tariff_m1"
+            elif all(non_tariff in self.exog_columns for non_tariff in ["FFR", "Inflation"]):
+                self.model_type = "tariff_ffr_cpi"
+            else:
+                raise ValueError("The exog_columns must contain valid non-tariff columns for the selected tariff model.")
+        elif contains_non_tariff:
+            raise ValueError("Non-tariff columns are present without any tariff columns. At least one tariff column is required.")
+        else:
+            raise ValueError("The exog_columns must contain at least one tariff or non-tariff column.")
 
-    # Forecast and predictions
-    #predictions = result.predict(start=start, end=end, exog=exog_test, typ='levels')
-    forecast = result.get_forecast(steps=len(future_data), exog=exog_test, alpha=0.2)
-    forecast_ci = forecast.conf_int()
+    def _load_models_and_predict(self):
+        """
+        Loads the models for each maturity and performs predictions.
+        """
+        selected_models = [
+            f"arima_model_{maturity}-year_monthly_tariff_{self.model_type}.pkl"
+            for maturity in all_maturities
+        ]
 
-    ## Extract forecast components
-    forecast_lower = pd.Series(forecast_ci.iloc[:, 0].values, index=future_data.index)
-    forecast_upper = pd.Series(forecast_ci.iloc[:, 1].values, index=future_data.index)
-    forecast_mean = pd.Series(forecast.predicted_mean.values, index=future_data.index)
+        for maturity, model_path in zip(all_maturities, selected_models):
+            forecast_mean, forecast_lower, forecast_upper = self._predict_single_yield(model_path)
+            self.predictions[f"{maturity}-year"] = {
+                "mean": forecast_mean,
+                "lower": forecast_lower,
+                "upper": forecast_upper,
+            }
 
-    return forecast_mean, forecast_lower, forecast_upper
+    def _predict_single_yield(self, model_pickle_path):
+        """
+        Predicts and returns the yield for a specific maturity using a pre-trained model.
 
-def predict_all_yields(future_data, exog_columns): # currently a stub
-    """
-    Predicts and returns the yields for all maturities using pre-trained models
+        Parameters:
+        model_pickle_path (str): Path to the pickled model file.
 
-    Parameters:
-    future_data (pd.DataFrame): DataFrame containing the future data with exogenous variables.
-    exog_columns (list): List of column names for exogenous variables.
+        Returns:
+        tuple: The predicted yield mean, lower bound, and upper bound for the confidence interval.
+        """
+        with open(model_pickle_path, 'rb') as f:
+            model = pickle.load(f)
 
-    Returns:
-    dict: A dictionary where keys are maturity names and values are the predicted yields.
-    """
-    # Determine the type of model based on exog_columns
-    contains_tariff = any(tariff in exog_columns for tariff in all_tariffs)
-    contains_non_tariff = any(non_tariff in exog_columns for non_tariff in non_tariff_columns)
+        self.future_data.index = pd.to_datetime(self.future_data.index)
+        exog_test = self.future_data[self.exog_columns]
 
-    # FLESH THIS OUT
-    if contains_tariff and contains_non_tariff:
-        model_type = "ffr_cpi_m1"
-    elif contains_non_tariff:
-        model_type = "vix_cs_m1"
-    else:
-        raise ValueError("The exog_columns must contain at least one non-tariff column.")
-    # end FLESH THIS OUT
+        forecast = model.get_forecast(steps=len(self.future_data), exog=exog_test, alpha=0.2)
+        forecast_ci = forecast.conf_int()
 
-    # Generate the list of model paths for each maturity
-    selected_models = [
-        f"arima_model_{maturity}-year_monthly_tariff_{model_type}.pkl"
-        for maturity in all_maturities
-    ]
+        forecast_lower = pd.Series(forecast_ci.iloc[:, 0].values, index=self.future_data.index)
+        forecast_upper = pd.Series(forecast_ci.iloc[:, 1].values, index=self.future_data.index)
+        forecast_mean = pd.Series(forecast.predicted_mean.values, index=self.future_data.index)
 
-    # Predict yields for all maturities
-    predictions = {}
-    for maturity, model_path in zip(all_maturities, selected_models):
-        forecast_mean, forecast_lower, forecast_upper = predict_single_yield(
-            model_path, future_data, exog_columns
-        )
-        predictions[f"{maturity}-year"] = {
-            "mean": forecast_mean,
-            "lower": forecast_lower,
-            "upper": forecast_upper,
+        return forecast_mean, forecast_lower, forecast_upper
+
+    def get_forecast(self):
+        """
+        Returns the forecasted mean values for all maturities.
+
+        Returns:
+        dict: A dictionary where keys are maturity names and values are forecasted mean values.
+        """
+        return {maturity: data["mean"] for maturity, data in self.predictions.items()}
+
+    def get_prediction_intervals(self):
+        """
+        Returns the prediction intervals (lower and upper bounds) for all maturities.
+
+        Returns:
+        dict: A dictionary where keys are maturity names and values are tuples of (lower, upper) bounds.
+        """
+        return {
+            maturity: (data["lower"], data["upper"])
+            for maturity, data in self.predictions.items()
         }
 
-    return predictions
-    
+    def get_step_by_step_predictions(self):
+        """
+        Returns the full prediction details (mean, lower, upper) for all maturities.
 
-"""
-if __name__ == "__main__":
-    #future_data is the dataframe with the exogenous variables for the future period
-
-
-
-
-    # Load the model
-    with open('saved_model.pkl', 'rb') as f:
-        result = pickle.load(f)
-
-    # Prepare the future data
-    future_data.index = pd.to_datetime(future_data.index)
-    start = future_data.index[0]
-    end = future_data.index[-1]
-    exog_test = future_data[exog_columns]  # Replace with your actual column names
-
-    # Forecast and predictions
-    predictions = result.predict(start=start, end=end, exog=exog_test, typ='levels')
-    forecast = result.get_forecast(steps=len(future_data), exog=exog_test, alpha=0.2)
-    forecast_ci = forecast.conf_int()
-
-    # Extract forecast components
-    forecast_lower = pd.Series(forecast_ci.iloc[:, 0].values, index=future_data.index)
-    forecast_upper = pd.Series(forecast_ci.iloc[:, 1].values, index=future_data.index)
-    forecast_mean = pd.Series(forecast.predicted_mean.values, index=future_data.index)
-
-    # --------- PLOTTING ---------
-    fig, ax = plt.subplots(figsize=(12, 6), facecolor='#1e1e1e')
-    ax.set_facecolor('#1e1e1e')
-
-    forecast_mean.plot(ax=ax, label='Forecast Mean', color='lime')
-    forecast_lower.plot(ax=ax, label='Lower Bound (80%)', linestyle='--', color='gray')
-    forecast_upper.plot(ax=ax, label='Upper Bound (80%)', linestyle='--', color='gray')
-
-    # Styling
-    plt.title('Forecasted Values from Time Series Model', fontsize=20, fontweight='bold', color='white', fontname='Avenir')
-    plt.xlabel('Date', fontsize=16, fontweight='bold', color='white', fontname='Avenir')
-    plt.ylabel('Prediction', fontsize=16, fontweight='bold', color='white', fontname='Avenir')
-
-    ax.tick_params(colors='white', labelsize=12)
-    for label in (ax.get_xticklabels() + ax.get_yticklabels()):
-        label.set_fontname('Avenir')
-
-    ax.grid(color='white', linestyle='--', linewidth=0.3, alpha=0.4)
-
-    legend = ax.legend(fontsize=12, facecolor='#595959')
-    for text in legend.get_texts():
-        text.set_color('white')
-        text.set_fontname('Avenir')
-
-    plt.tight_layout()
-    plt.show()
-
-    # Print the last forecasted value
-    print("Final forecast value:", forecast_mean.iloc[-1])
-
-    predicted_Value = forecast_mean.iloc[-1]
-"""
+        Returns:
+        dict: A dictionary where keys are maturity names and values are dictionaries with mean, lower, and upper bounds.
+        """
+        return self.predictions
