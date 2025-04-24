@@ -173,8 +173,9 @@ def get_yield_forecast_at_end_date(model_path, future_data, end_date):
         model = pickle.load(f)
 
     # Prepare the future data
-    future_data.index = pd.to_datetime(future_data.index).to_period("M")
-    exog_columns = [col for col in future_data.columns if col != "date"]
+    # Ensure the index is a PeriodIndex
+    if not isinstance(future_data.index, pd.PeriodIndex):
+        future_data.index = pd.to_datetime(future_data.index).to_period("M")    exog_columns = [col for col in future_data.columns if col != "date"]
     exog_test = future_data[exog_columns]
 
     # Generate the forecast

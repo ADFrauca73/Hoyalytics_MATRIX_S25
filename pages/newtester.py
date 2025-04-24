@@ -6,6 +6,7 @@ from scipy.special import expit
 from scipy.stats import norm
 import pandas as pd
 import statsmodels
+import os
 
 from utils.unpickling import get_yield_forecast_at_end_date
 
@@ -124,9 +125,12 @@ end_date = future_data.index[-1]
 if isinstance(end_date, pd.Period):
     end_date = end_date.to_timestamp()
 for maturity, model in zip(maturities, file_names):
-    #adrian function
-    # make the end date the last date in future_data
+    # Check if the model file exists
+    if not os.path.exists(model):
+        continue
 
+    # Adrian function
+    # Make the end date the last date in future_data
     predicted_yield = get_yield_forecast_at_end_date(model, future_data, end_date)
 
     print(f"Running model: {model}")
