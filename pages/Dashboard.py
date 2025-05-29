@@ -49,7 +49,7 @@ with col1:
         "Please consult a financial advisor before making any investment decisions."
     )
     if st.button("Run Full Prediction"):
-        st.switch_page("pages/data1.py")
+        st.switch_page("pages/exogenous_variable_selection.py")
 
 # ─── Business Day Generation ───────────────────────────────
 start_date = pd.to_datetime("2025-03-21").date()
