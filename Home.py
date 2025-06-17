@@ -121,11 +121,9 @@ with col2:
     st.markdown(
         """
         <div style="display: flex; justify-content: center; gap: 2.5rem; padding-left: 2rem;">
-            <a class="nav-link" href="graph" target="_self">Dashboard</a>
-            <a class="nav-link" href="https://www.hoyalytics.com" target="_blank">Hoyalytics Website</a>
+            <a class="nav-link" href="https://www.hoyalytics.com" target="_blank">Hoyalytics</a>
             <a class="nav-link" href="https://www.instagram.com/p/DIehWyPPRkP/?img_index=1" target="_blank">Instagram</a>
-            <a class="nav-link" style="opacity: 0.6;">Medium (Coming Soon)</a>
-            <a class="nav-link" href="https://github.com/ADFrauca73/MATRIX" target="_blank">GitHub</a>
+            <a class="nav-link" href="https://github.com/ADFrauca73/Hoyalytics_MATRIX_S25" target="_blank">GitHub</a>
         </div>
         """,
         unsafe_allow_html=True
@@ -141,11 +139,11 @@ with col3:
 # HERO Section
 st.markdown("""
 <div class="hero">
-  <h1>Predicting Your Digital<br>Bond Yields</h1>
-  <p>Our platform offers real‑time bond yield predictions, interactive insights, and a seamless user interface—all from your preferred device.</p>
+  <h1>Smarter Bond Yield Predictions with Policy Data</h1>
+  <p>Our platform brings together months of analysis on how policy decisions affect U.S. bond yields. Try out our models to see how different policy choices influence the forecast.</p>
 </div>
 """, unsafe_allow_html=True)
 
 # Dashboard Button
-if st.button("Continue to Dashboard", key="dashboard_button"):
+if st.button("Try It Now", key="dashboard_button"):
     st.switch_page("pages/Dashboard.py")
