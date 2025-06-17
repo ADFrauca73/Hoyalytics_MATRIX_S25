@@ -5,7 +5,7 @@ from pandas.tseries.holiday import USFederalHolidayCalendar
 from pandas.tseries.offsets import CustomBusinessDay
 
 # ─── Page Config ───────────────────────────────────────────
-st.set_page_config(page_title="Bond Yield Dashboard", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Prediction Dashboard", layout="wide", initial_sidebar_state="collapsed")
 
 # ─── Hide Sidebar ──────────────────────────────────────────
 st.markdown("""
@@ -38,18 +38,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ─── Header ────────────────────────────────────────────────
+# ─── Header and financial disclaimer ────────────────────────────────────────────────
 st.markdown("<h1 style='text-align: left; margin-top:2rem;'>Bond Yield Dashboard</h1>", unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 with col1:
     st.markdown("### Disclaimer")
     st.write(
-        "This tool provides an estimated bond yield and is for educational purposes only. "
-        "Please consult a financial advisor before making any investment decisions."
+        "This tool is for informational and educational purposes only. It does not constitute financial, investment, or legal advice. The outputs are estimates based on data modeling and should not be relied upon for financial decision-making. "
+        "Always consult a licensed financial advisor before making investment decisions."
     )
-    if st.button("Run Full Prediction"):
-        st.switch_page("pages/exogenous_variable_selection.py")
 
 # ─── Business Day Generation ───────────────────────────────
 start_date = pd.to_datetime("2025-03-21").date()
@@ -68,6 +66,16 @@ end_date = st.date_input(
     max_value=two_years_later,
     help="You may select any end date within 2 years of the fixed start (March 21, 2025)"
 )
+
+# ─── Date disclaimer ───────────────────────────────────────────
+with col1:
+    st.write(
+        "Note: The farther out the prediction end date, the greater the uncertainty in the model’s output. Each prediction includes a confidence interval, which also widens over time. For this reason, forecasts are limited to a maximum of two years from the current date."
+    )
+
+# ─── Next page button ───────────────────────────────────────────
+if st.button("Run Full Prediction"):
+        st.switch_page("pages/exogenous_variable_selection.py")
 
 # ─── Filter Dates ──────────────────────────────────────────
 df_selected_days = df_all_business_days[
