@@ -49,7 +49,7 @@ else:
 c1, _, c2 = st.columns([1, 6, 1])
 with c1:
     if st.button("⬅️ Previous"):
-        st.switch_page("pages/data5.py")
+        st.switch_page("pages/m1_entry.py")
 with c2:
     if st.button("Predictions"):
         st.switch_page("pages/newtester.py")
