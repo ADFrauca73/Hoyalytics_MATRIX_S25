@@ -146,4 +146,4 @@ with c1:
         st.switch_page("pages/Dashboard.py")
 with c2:
     if st.button("Next ➡️"):
-        st.switch_page("pages/data2.py")
+        st.switch_page("pages/vix_entry.py")
