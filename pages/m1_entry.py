@@ -104,9 +104,9 @@ with center:
 c1, _, c2 = st.columns([1,6,1])
 with c1:
     if st.button("⬅️ Previous"):
-        st.switch_page("pages/data4.py")
+        st.switch_page("pages/ffr_entry.py")
 with c2:
     if st.button("Next ➡️"):
-        st.switch_page("pages/data6.py")
+        st.switch_page("pages/preview.py")
 
 ############### DO NOT FUCKING CHANGE THIS LINE ###############
