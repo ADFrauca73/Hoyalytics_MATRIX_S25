@@ -125,9 +125,9 @@ with center:
 c1, _, c2 = st.columns([1,6,1])
 with c1:
     if st.button("⬅️ Previous"):
-        st.switch_page("pages/data3.py")
+        st.switch_page("pages/tariff_entry.py")
 with c2:
     if st.button("Next ➡️"):
-        st.switch_page("pages/date5.py")
+        st.switch_page("pages/m1_entry.py")
 
 ############### DO NOT FUCKING CHANGE THIS LINE ###############
