@@ -35,49 +35,54 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown(
-    "<div class='section-title'>Enter Consumer Sentiment and VIX Data</div>",
-    unsafe_allow_html=True
-)
+st.markdown("<div class='section-title'>Enter Consumer Sentiment and VIX Data</div>", unsafe_allow_html=True)
 
 # ─── Load & Validate Data ─────────────────────────────────
 if "filtered_df" not in st.session_state:
     st.error("No business day data found. Please run the Dashboard page first.")
-    st.stop()
+# ─── Load & Validate ──────────────────────────────────────
 
-# Copy & index by Business Day
 df = st.session_state["filtered_df"].copy()
 df["Business Day"] = pd.to_datetime(df["Business Day"])
 df.set_index("Business Day", inplace=True)
 
 today = pd.to_datetime(date.today())
+editable_df = df.loc[df.index >= today]
 
-# ─── Ensure Columns Exist ────────────────────────────────
-for col in ["diff_CSD", "VIX_close"]:
-    if col not in df.columns:
-        df[col] = np.nan
-df["diff_CSD"]  = pd.to_numeric(df["diff_CSD"], errors="coerce")
-df["VIX_close"] = pd.to_numeric(df["VIX_close"], errors="coerce")
+if editable_df.empty:
+    st.info("All dates have data through yesterday. Nothing to input today.")
+    st.stop()
 
-# ─── Define Editable Range ───────────────────────────────
-editable_mask = df.index >= today
-editable_df   = df.loc[editable_mask]
+# ─── Monthly / Daily Toggle ───────────────────────────────
+if "monthly_inputs" not in st.session_state:
+    st.session_state.monthly_inputs = False
 
-# ─── Build Input UI ───────────────────────────────────────
+label = "Switch to Monthly Inputs" if not st.session_state.monthly_inputs else "Switch to Daily Inputs"
+if st.button(label):
+    st.session_state.monthly_inputs = not st.session_state.monthly_inputs
+
+if st.session_state.monthly_inputs:
+    input_df = editable_df.groupby(editable_df.index.to_period("M")).head(1)
+else:
+    input_df = editable_df
+
+# ─── Input Grid ───────────────────────────────────────────
 inputs = {}
-col1, col2, col3 = st.columns(3)
-with col1:
-    st.markdown("<div class='label-title'>Date</div>", unsafe_allow_html=True)
-with col2:
-    st.markdown("<div class='label-title'>Cumulative CSD</div>", unsafe_allow_html=True)
-with col3:
-    st.markdown("<div class='label-title'>VIX Close</div>", unsafe_allow_html=True)
+st.markdown(
+    "<div style='display:flex'>"
+    "<div class='label-title' style='flex:1'>Date</div>"
+    "<div class='label-title' style='flex:1'>CSD Level</div>"
+    "<div class='label-title' style='flex:1'>VIX Close</div>"
+    "</div>",
+    unsafe_allow_html=True
+)
 
-for i, (day, row) in enumerate(editable_df.iterrows()):
+for i, (biz_day, _) in enumerate(input_df.iterrows()):
+    ds = biz_day.strftime("%Y-%m-%d")
     date_str = day.strftime("%Y-%m-%d")
     c1, c2, c3 = st.columns(3)
     with c1:
-        st.markdown(f"<div class='date-box'>{date_str}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='date-box'>{ds}</div>", unsafe_allow_html=True)
     with c2:
         csd_cum = st.number_input(
             "CSD", key=f"cs_{i}", label_visibility="collapsed",
