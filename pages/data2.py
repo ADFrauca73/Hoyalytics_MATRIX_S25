@@ -54,14 +54,14 @@ if editable_df.empty:
     st.stop()
 
 # ─── Monthly / Daily Toggle ───────────────────────────────
-if "monthly_inputs_vix" not in st.session_state:
-    st.session_state.monthly_inputs_vix = False
+if "monthly_inputs" not in st.session_state:
+    st.session_state.monthly_inputs = False
 
-label = "Switch to Monthly Inputs" if not st.session_state.monthly_inputs_vix else "Switch to Daily Inputs"
+label = "Switch to Monthly Inputs" if not st.session_state.monthly_inputs else "Switch to Daily Inputs"
 if st.button(label):
-    st.session_state.monthly_inputs_vix = not st.session_state.monthly_inputs_vix
+    st.session_state.monthly_inputs = not st.session_state.monthly_inputs
 
-if st.session_state.monthly_inputs_vix:
+if st.session_state.monthly_inputs:
     input_df = editable_df.groupby(editable_df.index.to_period("M")).head(1)
 else:
     input_df = editable_df
@@ -77,24 +77,28 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-for i, (biz_day, row) in enumerate(input_df.iterrows()):
+for i, (biz_day, _) in enumerate(input_df.iterrows()):
     ds = biz_day.strftime("%Y-%m-%d")
     c1, c2, c3 = st.columns(3)
     with c1:
         st.markdown(f"<div class='date-box'>{ds}</div>", unsafe_allow_html=True)
     with c2:
-        csd_level = st.number_input(
-            "CSD", key=f"cs_{i}", label_visibility="collapsed",
-            value=float(row["diff_CSD"]) if not pd.isna(row["diff_CSD"]) else 0.0,
-            format="%.2f"
+        csd = st.number_input(
+            label=f"csd_{ds}",
+            key=f"csd_{i}",
+            value=0.0,
+            format="%.2f",
+            label_visibility="collapsed"
         )
     with c3:
         vix = st.number_input(
-            "VIX", key=f"vix_{i}", label_visibility="collapsed",
-            value=float(row["VIX_close"]) if "VIX_close" in row and not pd.isna(row["VIX_close"]) else 0.0,
-            format="%.2f"
+            label=f"vix_{ds}",
+            key=f"vix_{i}",
+            value=0.0,
+            format="%.2f",
+            label_visibility="collapsed"
         )
-    inputs[ds] = {"csd": csd_level, "vix": vix}
+    inputs[ds] = {"csd": csd, "vix": vix}
 
 # ─── Save & Process ───────────────────────────────────────
 _, center, _ = st.columns([4,1,4])
@@ -110,6 +114,7 @@ with center:
                 csd_series.loc[dt] = vals["csd"] if vals["csd"] != 0.0 else np.nan
                 vix_series.loc[dt] = vals["vix"] if vals["vix"] != 0.0 else np.nan
 
+        # Interpolate levels → get differences
         csd_interp = csd_series.interpolate(method="linear", limit_direction="both").fillna(0.0)
         diff_csd = csd_interp.diff().fillna(csd_interp)
 
@@ -122,7 +127,7 @@ with center:
         st.session_state["filtered_df"] = df_reset
 
         st.success("CSD and VIX data saved and processed.")
-        st.markdown("### Full Dataset Preview")
+        st.markdown("### Preview")
         st.dataframe(df_reset, use_container_width=True)
 
         csv_data = df_reset.to_csv(index=False).encode("utf-8")
@@ -134,12 +139,12 @@ with center:
         )
 
 # ─── Navigation ───────────────────────────────────────────
-c1, _, c2 = st.columns([1,6,1])
+c1, _, c2 = st.columns([1, 6, 1])
 with c1:
     if st.button("⬅️ Previous"):
-        st.switch_page("pages/exogenous_variable_selection.py")
+        st.switch_page("pages/data1.py")
 with c2:
     if st.button("Next ➡️"):
-        st.switch_page("pages/tariff_entry.py")
+        st.switch_page("pages/data3.py")
 
 ############### DO NOT FUCKING CHANGE THIS LINE ###############

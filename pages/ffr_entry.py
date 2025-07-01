@@ -55,12 +55,23 @@ today = pd.to_datetime(date.today())
 for col in ["diff_FFR", "diff_CPI"]:
     if col not in df.columns:
         df[col] = np.nan
-df["diff_FFR"] = pd.to_numeric(df["diff_FFR"], errors="coerce")
-df["diff_CPI"] = pd.to_numeric(df["diff_CPI"], errors="coerce")
+
+# ─── Monthly/Daily Toggle ────────────────────────────────
+if "monthly_inputs_ffr" not in st.session_state:
+    st.session_state.monthly_inputs_ffr = False
+
+label = "Switch to Monthly Inputs" if not st.session_state.monthly_inputs_ffr else "Switch to Daily Inputs"
+if st.button(label):
+    st.session_state.monthly_inputs_ffr = not st.session_state.monthly_inputs_ffr
 
 # ─── Define Editable Range ───────────────────────────────
 editable_mask = df.index >= today
-editable_df   = df.loc[editable_mask]
+editable_df = df.loc[editable_mask]
+
+if st.session_state.monthly_inputs_ffr:
+    input_df = editable_df.groupby(editable_df.index.to_period("M")).head(1)
+else:
+    input_df = editable_df
 
 # ─── Build Input UI ───────────────────────────────────────
 inputs = {}
@@ -72,7 +83,7 @@ with col2:
 with col3:
     st.markdown("<div class='label-title'>Inflation (CPI) Level</div>", unsafe_allow_html=True)
 
-for i, (day, row) in enumerate(editable_df.iterrows()):
+for i, (day, row) in enumerate(input_df.iterrows()):
     date_str = day.strftime("%Y-%m-%d")
     c1, c2, c3 = st.columns(3)
     with c1:
@@ -93,7 +104,6 @@ for i, (day, row) in enumerate(editable_df.iterrows()):
 _, center, _ = st.columns([4,1,4])
 with center:
     if st.button("Save Data"):
-        # 1) Treat zero as 'not entered'
         raw_ffr = {
             pd.to_datetime(d): v["FFR"] if v["FFR"] != 0.0 else np.nan
             for d, v in inputs.items()
@@ -103,23 +113,42 @@ with center:
             for d, v in inputs.items()
         }
 
-        # 2) Interpolate forward and fill early NaNs with 0
-        level_ffr = pd.Series(raw_ffr).reindex(editable_df.index).interpolate(method="linear", limit_direction="forward").fillna(0.0)
-        level_cpi = pd.Series(raw_cpi).reindex(editable_df.index).interpolate(method="linear", limit_direction="forward").fillna(0.0)
+        # Interpolate levels
+        level_ffr = (
+            pd.Series(raw_ffr)
+            .reindex(editable_df.index)
+            .interpolate(method="linear", limit_direction="forward")
+            .fillna(0.0)
+        )
+        level_cpi = (
+            pd.Series(raw_cpi)
+            .reindex(editable_df.index)
+            .interpolate(method="linear", limit_direction="forward")
+            .fillna(0.0)
+        )
 
-        # 3) Compute differences and store in diff columns
+        # Compute differences
         diff_ffr = level_ffr.diff().fillna(level_ffr)
         diff_cpi = level_cpi.diff().fillna(level_cpi)
 
+        # Store differences only
         df.loc[editable_mask, "diff_FFR"] = diff_ffr.values
         df.loc[editable_mask, "diff_CPI"] = diff_cpi.values
 
-        # 4) Commit
         df.reset_index(inplace=True)
         st.session_state["filtered_df"] = df
-        st.success("FFR and CPI levels interpolated; differences stored in diff_FFR and diff_CPI.")
-        st.markdown("### Preview")
-        st.dataframe(df[["Business Day", "diff_FFR", "diff_CPI"]], use_container_width=True)
+
+        st.success("FFR and CPI differences saved.")
+        st.markdown("### Full Dataset Preview")
+        st.dataframe(df, use_container_width=True)
+
+        csv_data = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Full Dataset as CSV",
+            data=csv_data,
+            file_name="full_dataset_with_ffr_cpi.csv",
+            mime="text/csv"
+        )
 
 # ─── Navigation ───────────────────────────────────────────
 c1, _, c2 = st.columns([1,6,1])
