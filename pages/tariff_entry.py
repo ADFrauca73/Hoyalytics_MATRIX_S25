@@ -179,16 +179,16 @@ with clear_col:
 # ─── Navigation ───────────────────────────────────────────────────────
 c1, _, c3 = st.columns([1, 5, 1])
 with c1:
-    if st.session_state["VIX_BOOL"] == 1:
+    if st.session_state["VIX_BOOL"] == True:
         st.switch_page("pages/vix_entry.py")
     else:
         st.switch_page("pages/exogenous_variable_selection.py")
         
 with c3:
     if st.button("Next ➡️", key="next_btn"):
-        if st.session_state["FFR_BOOL"] == 1:
+        if st.session_state["FFR_BOOL"] == True:
             st.switch_page("pages/ffr_entry.py")
-        elif st.session_state["M1_BOOL"] == 1:
+        elif st.session_state["M1_BOOL"] == True:
             st.switch_page("pages/m1_entry.py")
         else:
             st.switch_page("pages/preview.py")
