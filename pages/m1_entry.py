@@ -35,10 +35,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown(
-    "<div class='section-title'>Enter M1 Supply Data</div>",
-    unsafe_allow_html=True
-)
+st.markdown("<div class='section-title'>Enter M1 Supply Data</div>", unsafe_allow_html=True)
 
 # ─── Load & Validate Data ─────────────────────────────────
 if "filtered_df" not in st.session_state:
@@ -54,11 +51,23 @@ today = pd.to_datetime(date.today())
 # ─── Ensure Column Exists ────────────────────────────────
 if "diff_M1_supply" not in df.columns:
     df["diff_M1_supply"] = np.nan
-df["diff_M1_supply"] = pd.to_numeric(df["diff_M1_supply"], errors="coerce")
+
+# ─── Monthly/Daily Toggle ────────────────────────────────
+if "monthly_inputs_m1" not in st.session_state:
+    st.session_state.monthly_inputs_m1 = False
+
+label = "Switch to Monthly Inputs" if not st.session_state.monthly_inputs_m1 else "Switch to Daily Inputs"
+if st.button(label):
+    st.session_state.monthly_inputs_m1 = not st.session_state.monthly_inputs_m1
 
 # ─── Define Editable Range ───────────────────────────────
 editable_mask = df.index >= today
-editable_df   = df.loc[editable_mask]
+editable_df = df.loc[editable_mask]
+
+if st.session_state.monthly_inputs_m1:
+    input_df = editable_df.groupby(editable_df.index.to_period("M")).head(1)
+else:
+    input_df = editable_df
 
 # ─── Build Input UI ───────────────────────────────────────
 inputs = {}
@@ -68,7 +77,7 @@ with col1:
 with col2:
     st.markdown("<div class='label-title'>M1 Supply Level</div>", unsafe_allow_html=True)
 
-for i, (day, row) in enumerate(editable_df.iterrows()):
+for i, (day, row) in enumerate(input_df.iterrows()):
     date_str = day.strftime("%Y-%m-%d")
     c1, c2 = st.columns(2)
     with c1:
@@ -89,16 +98,30 @@ with center:
             for d, v in inputs.items()
         }
 
-        level_m1 = pd.Series(raw_m1).reindex(editable_df.index).interpolate(method="linear", limit_direction="forward").fillna(0.0)
+        level_m1 = (
+            pd.Series(raw_m1)
+            .reindex(editable_df.index)
+            .interpolate(method="linear", limit_direction="forward")
+            .fillna(0.0)
+        )
         diff_m1 = level_m1.diff().fillna(level_m1)
 
         df.loc[editable_mask, "diff_M1_supply"] = diff_m1.values
 
         df.reset_index(inplace=True)
         st.session_state["filtered_df"] = df
-        st.success("M1 Supply levels interpolated; differences stored in `diff_M1_supply`.")
-        st.markdown("### Preview")
-        st.dataframe(df[["Business Day", "diff_M1_supply"]], use_container_width=True)
+
+        st.success("M1 Supply differences saved.")
+        st.markdown("### Full Dataset Preview")
+        st.dataframe(df, use_container_width=True)
+
+        csv_data = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="📥 Download Full Dataset as CSV",
+            data=csv_data,
+            file_name="full_dataset_with_m1.csv",
+            mime="text/csv"
+        )
 
 # ─── Navigation ───────────────────────────────────────────
 c1, _, c2 = st.columns([1,6,1])
