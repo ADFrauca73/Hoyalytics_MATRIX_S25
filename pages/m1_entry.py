@@ -127,7 +127,14 @@ with center:
 c1, _, c2 = st.columns([1,6,1])
 with c1:
     if st.button("⬅️ Previous"):
-        st.switch_page("pages/ffr_entry.py")
+        if st.session_state["FFR_BOOL"] == True:
+            st.switch_page("pages/ffr_entry.py")
+        elif st.session_state["tariff_BOOL"] == True:
+            st.switch_page("pages/tariff_entry.py")
+        elif st.session_state["VIX_BOOL"] == True:
+            st.switch_page("pages/vix_entry.py")
+        else:
+            st.switch_page("pages/exogenous_variable_selection.py")
 with c2:
     if st.button("Next ➡️"):
         st.switch_page("pages/preview.py")
