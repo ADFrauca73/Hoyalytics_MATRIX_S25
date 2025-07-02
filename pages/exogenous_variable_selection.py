@@ -139,7 +139,7 @@ if st.button("Apply Selections", use_container_width=True):
             st.session_state["tariff_BOOL"] = False
         #st.success("Tariffs and variables reordered successfully.", st.session_state["FFR_BOOL"],st.session_state["VIX_BOOL"], st.session_state["M1_BOOL"], st.session_state["tarriff_BOOL"])
         st.success(
-            f"Tariffs and variables reordered successfully. FFR: {st.session_state['FFR_BOOL']}, VIX: {st.session_state['VIX_BOOL']}, M1: {st.session_state['M1_BOOL']}, Tariff: {st.session_state['tarriff_BOOL']}"
+            f"Tariffs and variables reordered successfully. FFR: {st.session_state['FFR_BOOL']}, VIX: {st.session_state['VIX_BOOL']}, M1: {st.session_state['M1_BOOL']}, Tariff: {st.session_state['tariff_BOOL']}"
         )
 
 # ─── Preview ──────────────────────────────────────────────
