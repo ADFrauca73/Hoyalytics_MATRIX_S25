@@ -133,7 +133,11 @@ if st.button("Apply Selections", use_container_width=True):
         st.session_state["FFR_BOOL"] = "Inflation / FFR" in new_var_selection
         st.session_state["VIX_BOOL"] = "Consumer Sentiment / VIX" in new_var_selection
         st.session_state["M1_BOOL"] = "M1 Supply" in new_var_selection
-        st.success("Tariffs and variables reordered successfully.")
+        if len(st.session_state["selected_tariffs"]) > 0:
+            st.session_state["tarriff_BOOL"] = 1
+        else:
+            st.session_state["tarriff_BOOL"] = 0
+        st.success("Tariffs and variables reordered successfully.", st.session_state["FFR_BOOL"],st.session_state["VIX_BOOL"], st.session_state["M1_BOOL"], st.session_state["tarriff_BOOL"])
 
 # ─── Preview ──────────────────────────────────────────────
 if st.session_state["filtered_df"] is not None:
@@ -146,4 +150,13 @@ with c1:
         st.switch_page("pages/Dashboard.py")
 with c2:
     if st.button("Next ➡️"):
-        st.switch_page("pages/vix_entry.py")
+        if st.session_state["VIX_BOOL"] == 1:
+            st.switch_page("pages/vix_entry.py")
+        elif st.session_state["tarriff_BOOL"] == 1:
+            st.switch_page("pages/tariff_entry.py")
+        elif st.session_state["FFR_BOOL"] == 1:
+            st.switch_page("pages/ffr_entry.py")
+        elif st.session_state["M1_BOOL"] == 1:
+            st.switch_page("pages/m1_entry.py")
+        else:
+            st.error("No variables selected, please add variables to continue")
