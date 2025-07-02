@@ -137,7 +137,10 @@ if st.button("Apply Selections", use_container_width=True):
             st.session_state["tarriff_BOOL"] = 1
         else:
             st.session_state["tarriff_BOOL"] = 0
-        st.success("Tariffs and variables reordered successfully.", st.session_state["FFR_BOOL"],st.session_state["VIX_BOOL"], st.session_state["M1_BOOL"], st.session_state["tarriff_BOOL"])
+        #st.success("Tariffs and variables reordered successfully.", st.session_state["FFR_BOOL"],st.session_state["VIX_BOOL"], st.session_state["M1_BOOL"], st.session_state["tarriff_BOOL"])
+        st.success(
+            f"Tariffs and variables reordered successfully. FFR: {st.session_state['FFR_BOOL']}, VIX: {st.session_state['VIX_BOOL']}, M1: {st.session_state['M1_BOOL']}, Tariff: {st.session_state['tarriff_BOOL']}"
+        )
 
 # ─── Preview ──────────────────────────────────────────────
 if st.session_state["filtered_df"] is not None:
